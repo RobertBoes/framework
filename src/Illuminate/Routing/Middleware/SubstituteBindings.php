@@ -5,6 +5,8 @@ namespace Illuminate\Routing\Middleware;
 use Closure;
 use Illuminate\Contracts\Routing\Registrar;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Routing\RouteAction;
+use Illuminate\Support\Str;
 
 class SubstituteBindings
 {
@@ -40,8 +42,23 @@ class SubstituteBindings
 
             $this->router->substituteImplicitBindings($route);
         } catch (ModelNotFoundException $exception) {
-            if ($route->getMissing()) {
-                return $route->getMissing()($request, $exception);
+            $missing = $route->getMissing();
+
+            if ($missing instanceof Closure) {
+                return $missing($request, $exception);
+            }
+
+            if ($missing !== null) {
+                if (is_string($missing)) {
+                    $missing = ['uses' => $missing];
+                    $missing['controller'] = $missing['uses'];
+                }
+
+                [$class, $method] = Str::parseCallback(RouteAction::parse($route->uri(), $missing)['uses']);
+
+                return $route->controllerDispatcher()->dispatch(
+                    $route, app()->make(ltrim($class, '\\')), $method,
+                );
             }
 
             throw $exception;
