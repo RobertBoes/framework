@@ -48,7 +48,7 @@ class SubstituteBindings
                 return $missing($request, $exception);
             }
 
-            if ($missing !== null) {
+            if (! is_null($missing)) {
                 if (is_string($missing)) {
                     $missing = ['uses' => $missing];
                     $missing['controller'] = $missing['uses'];
